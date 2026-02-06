@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>議事録</title>
+
+  <!-- reuse member styling for consistent look -->
+  <link rel="stylesheet" href="./member.css" />
+
+  <style>
+    .record-title {
+      font-size: 22px;
+      font-weight: 900;
+      margin: 18px 0 10px;
+      text-align: center;
+    }
+
+    .meeting-title {
+      max-width: 920px;
+      margin: 8px auto 0;
+      padding: 0 16px;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .record-wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 0 16px 32px;
+    }
+
+    .record-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 18px 0 10px;
+    }
+
+    .record-section {
+      margin: 26px 0 10px;
+      font-size: 18px;
+      font-weight: 900;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 6px;
+    }
+
+    .record-item {
+      margin: 14px 0 22px;
+    }
+
+    .record-agenda-title {
+      font-weight: 800;
+      margin: 0 0 6px;
+    }
+
+    .record-agenda-en {
+      color: #666;
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+
+    .record-decision {
+      white-space: pre-wrap;
+      background: #fbfbfb;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 6px;
+    }
+
+    .record-empty {
+      color: #888;
+      font-style: italic;
+    }
+
+    @media print {
+      .record-actions { display: none; }
+      a { text-decoration: none; color: #000; }
+      body { background: #fff; }
+    }
+    .record-header {
+  max-width: 920px;
+  margin: 18px auto 10px;
+  padding: 0 16px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.record-badge {
+  margin-left: 8px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.attendance-area {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.att-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  font-size: 13px;
+  font-weight: 600;
+}
+  </style>
+</head>
+<body>
+
+<!-- login guard -->
+<script src="./guard.js"></script>
+
+<div class="record-header">
+  <div id="meetingTitle"></div>
+  <div id="attendanceArea" class="attendance-area"></div>
+  <span class="record-badge">議事録</span>
+</div>
+
+<div class="record-wrap">
+
+  <div class="record-actions">
+  <div>
+    <button id="printBtn" type="button">🖨 Print / PDF</button>
+    <button id="exportHtmlBtn" type="button">💾 Export HTML</button>
+  </div>
+  <a href="./member-home.html">← Back to Meeting List</a>
+</div>
+  <hr>
+
+  <!-- JS renders everything here -->
+  <section id="recordContent"></section>
+
+</div>
+
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./record.js"></script>
+
+</body>
+</html>

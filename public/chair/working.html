@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Working Page – Agenda Preparation</title>
+  <link rel="stylesheet" href="working.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="working.js" defer></script>
+</head>
+
+<body>
+  <div class="container">
+
+    <div class="topbar">
+      <div>
+        <p class="app-title">Agenda / Meeting Management – Working Page</p>
+        <p class="sub">Chair preparation → Member-first preview (titles + materials only)</p>
+      </div>
+      <button class="btn" id="btnBackHome">← Back to Home</button>
+    </div>
+
+    <div class="grid">
+
+      <!-- LEFT: Working input -->
+      <div class="card">
+        <h2>Meeting / Agenda Input</h2>
+
+        <div class="publish-note">Items marked here will be shown to members (JP + EN)</div>
+
+        <!-- Compact meeting -->
+        <div class="meeting-inline">
+          <span class="pill">Meeting</span>
+          <div class="meeting-fields">
+            <label for="meetingTitle">Meeting Title (JP / EN)</label>
+            <input id="meetingTitle" type="text" placeholder="26年度 第一回英文学科会議 / FY2026 1st English Dept. Meeting">
+            <p id="meetingIdDisplay" class="small-help" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <label style="margin-top:14px;">Create Agenda Item</label>
+
+        <div class="row">
+          <div>
+            <label for="agendaId">Agenda ID</label>
+            <input id="agendaId" type="text" placeholder="1">
+          </div>
+          <div>
+            <label for="agendaType">Type</label>
+       <select id="agendaType">
+         <option value="report">報告・確認事項</option>
+         <option value="discuss" selected>審議事項</option>
+         <option value="contact">連絡事項</option>
+         </select>          
+         </div>
+        </div>
+
+        <label for="titleJP">Agenda Title (JP) ※必須</label>
+        <input id="titleJP" type="text" placeholder="例：科目等履修生への公開授業">
+
+        <label for="titleEN">Agenda Title (EN) (ChatGPT translation)</label>
+        <input id="titleEN" type="text" placeholder="English title (translated)">
+
+        <label for="materialsText">Materials – Text (JP + EN expected)</label>
+        <textarea id="materialsText" placeholder="Paste official request / email text here (later: JP + EN)"></textarea>
+
+        <label for="attachmentName">添付ファイル名（OneDrive 表示名）</label>
+        <input id="attachmentName" type="text" placeholder="例：英文学科.xlsx / 依頼状.pdf">
+
+        <label for="attachmentUrl">添付リンク（OneDrive URL）</label>
+        <input id="attachmentUrl" type="text" placeholder="https://... (OneDriveの共有リンクを貼る)">
+        <label for="materialUrls">Material URLs (multiple)</label>
+        <input id="materialUrls" type="text" placeholder="https://... (You can paste multiple URLs separated by spaces or commas)">
+
+        <label for="suggestion">案（Suggestion）</label>
+        <textarea id="suggestion" placeholder="ここに案を書く（メンバーに表示される）"></textarea>
+        
+        <label for="blueMemo">🔵 メモ（自分用・メンバー非表示）</label>
+        <textarea id="blueMemo" placeholder="ここは自分用メモ（後で埋める／確認する）"></textarea>
+
+        <div class="actions">
+          <button class="btn" id="btnClear">Clear</button>
+          <button class="btn primary" id="btnAdd">Add to Agenda</button>
+          <button class="btn" id="btnCancelEdit" style="display:none;">Cancel Edit</button>
+          <button class="btn primary" id="btnCreateMeeting">Create Meeting</button>
+          <button class="btn primary" id="btnUpdateMeeting" style="display:none;">
+            Update Meeting
+          </button>
+          
+        </div>
+        <p class="hint">※ “Add to Agenda” means: this item becomes visible in the Member-first preview below.</p>
+        <p class="small-help" id="saveStatus" aria-live="polite"></p>
+      </div>
+
+      <!-- RIGHT: Member-first preview -->
+      <div class="card">
+        <div class="preview-head">
+          <p class="preview-title">Agenda Items (Member-first preview)</p>
+        </div>
+        <p style="margin:6px 0 12px;">
+         <a id="goMemberPage" href="#" style="font-weight:600;">
+            👥 この会議の Member Page を開く
+         </a>
+        </p>
+
+        <div class="empty" id="emptyState">
+          No agenda items yet.<br>
+          Add an item on the left using <b>“Add to Agenda”</b>.<br>
+          This area should show exactly what members see first: <b>Titles + Materials (files/links)</b>.
+        </div>
+
+        <div id="previewRoot"></div>
+
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

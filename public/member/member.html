@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Member Page</title>
+  <link rel="stylesheet" href="./member.css" />
+</head>
+<body>
+
+<!-- login guard (必ず最初) -->
+<script src="./guard.js"></script>
+
+<!-- Header -->
+<div style="display:flex; justify-content:space-between; align-items:center;">
+  <h1>Member Page（共有・意見）</h1>
+  <div>
+    <a href="#" id="recordLink" style="margin-right:16px;">議事録（Record）</a>
+    <a href="./logout.html">Logout</a>
+  </div>
+</div>
+
+<!-- Meeting title (NEW) -->
+<h2 id="meetingTitle" style="max-width: 920px; margin: 8px auto 0; padding: 0 16px; font-size:18px; font-weight:800;"></h2>
+<!-- Attendance (NEW) -->
+<section style="max-width: 920px; margin: 10px auto 0; padding: 0 16px;">
+  <h3 style="margin: 6px 0; font-size: 16px;">出席確認（Attendance）</h3>
+
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <input
+      id="attendanceNameInput"
+      type="text"
+      placeholder="名前（例：江口 / 佐藤悠太 / Yuta Sato）"
+      style="min-width: 240px; padding: 8px 10px;"
+    />
+    <button id="attendanceBtn" type="button">出席する</button>
+    <span id="attendanceStatus" style="color:#006400;"></span>
+  </div>
+
+  <div id="attendanceChips" style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;"></div>
+</section>
+
+<p style="color:#555;">
+  Select an agenda item to view details and submit opinions.<br>
+  議題を選択すると、詳細と意見入力欄が表示されます。
+</p>
+
+<hr>
+
+<!-- Agenda list -->
+<section>
+  <h2>Agenda（議題一覧）</h2>
+  <ol id="agendaList"></ol>
+</section>
+
+<hr>
+
+<!-- Selected agenda detail -->
+<section id="itemArea" style="display:none;">
+  <h2 id="itemHeading">Agenda Item</h2>
+
+  <p id="itemTitle"></p>
+
+  <div id="materialsArea"></div>
+  <hr>
+
+  <!-- Opinion input -->
+  <section>
+    <h3>Input Your Opinion</h3>
+
+    <p>
+      <label>
+        Name:<br>
+        <input id="nameInput" type="text" placeholder="Eguchi / Takebe / Anonymous">
+      </label>
+    </p>
+
+    <p>
+      <label>
+        Opinion / Comment:<br>
+        <textarea
+          id="textInput"
+          rows="6"
+          cols="70"
+          placeholder="意見を書いてください / Write your opinion here"
+        ></textarea>
+      </label>
+    </p>
+
+    <button id="sendBtn">Submit</button>
+    <span id="status" style="margin-left:12px; color:#006400;"></span>
+
+    <h3 style="margin-top:24px;">Shared Opinions</h3>
+    <div id="list"></div>
+    <hr>
+
+    <h3>What we decided（決定事項）</h3>
+
+    <textarea
+      id="decisionInput"
+      rows="8"
+      cols="70"
+    >【決定】
+・
+
+【補足（コメント）】
+</textarea>
+
+    <br>
+
+    <button id="saveDecisionBtn">Save Decision</button>
+    <span id="decisionStatus" style="margin-left:12px; color:#006400;"></span>
+
+    <hr>
+
+  </section>
+</section>
+
+<hr>
+
+<p>
+  <a href="./member-home.html">← Back to Meeting List</a>
+</p>
+
+<!-- page logic -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./app.js"></script>
+
+</body>
+</html>
