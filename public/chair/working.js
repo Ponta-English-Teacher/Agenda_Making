@@ -600,7 +600,7 @@ function init() {
 const goMemberPage = document.getElementById("goMemberPage");
 
 if (goMemberPage && meetingIdFromUrl) {
-  goMemberPage.href = `member.html?meeting_id=${meetingIdFromUrl}`;
+  goMemberPage.href = `../member/member-home.html?meeting_id=${meetingIdFromUrl}`;
   goMemberPage.style.display = "inline";
 } else if (goMemberPage) {
   // No meeting yet (create mode)
