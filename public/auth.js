@@ -1,6 +1,6 @@
 // ===== Shared credentials (prototype) =====
 const SHARED_ID = "Hokusei English";
-const PASSWORD = "hokusei2026"; // <- set this
+const PASSWORD = "english2026"; // <- set this
 // =========================================
 
 const KEY = "agenda_login_ok";
