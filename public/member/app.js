@@ -329,7 +329,17 @@ if (attName && attUrl) {
 (async () => {
   if (!elDecisionInput) return;
 
-  const d = await loadDecision(getMeetingId(), getAgendaId(it));
+  const d = it.decisionText || "";
+
+if (d && d.trim() !== "") {
+  elDecisionInput.value = d;
+} else {
+  elDecisionInput.value = `【決定】
+・
+
+【補足（コメント）】
+`;
+}
   if (d?.decided && d.decided.trim() !== "") {
   elDecisionInput.value = d.decided;
 } else {
