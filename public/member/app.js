@@ -123,7 +123,10 @@ async function loadDecision(meetingId, agendaId) {
 async function saveDecision(meetingId, agendaId, decided) {
   const { error } = await supabase
     .from("decisions")
-    .upsert([{ meeting_id: meetingId, agenda_id: agendaId, decided }]);
+    .upsert(
+      [{ meeting_id: meetingId, agenda_id: agendaId, decided }],
+      { onConflict: "meeting_id,agenda_id" }
+    );
 
   if (error) {
     console.error(error);
