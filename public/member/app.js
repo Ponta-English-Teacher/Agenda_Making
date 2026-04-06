@@ -109,13 +109,15 @@ if (recordLink) {
 async function loadDecision(meetingId, agendaId) {
   const { data, error } = await supabase
     .from("decisions")
-    .select("decided")
+    .select("decided, created_at")
     .eq("meeting_id", meetingId)
     .eq("agenda_id", agendaId)
-    .maybeSingle();
+    .order("created_at", { ascending: false })
+    .limit(1);
 
-  if (error) return null;
-  return data;
+  if (error || !data || data.length === 0) return null;
+
+  return data[0];
 }
 
 async function saveDecision(meetingId, agendaId, decided) {
