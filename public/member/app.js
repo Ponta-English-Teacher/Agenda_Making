@@ -439,11 +439,11 @@ function renderAttendance(names) {
     .order("agenda_no", { ascending: true });
 
   if (aErr) {
-    console.error(aErr);
-    renderAgendaList([]);
-    return;
-  }
-
+  console.error("AGENDA ERROR:", aErr);
+  alert("Agenda load error: " + JSON.stringify(aErr));
+  renderAgendaList([]);
+  return;
+}
   const items = (rows || []).map((r) => ({
     id: r.id,
     agendaId: r.id, // IMPORTANT: agenda_items.id is the key
