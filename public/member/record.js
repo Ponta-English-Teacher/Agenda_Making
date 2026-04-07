@@ -53,16 +53,7 @@
     return data || [];
   }
 
-  async function loadDecisionsForMeeting(meetingId) {
-    const { data, error } = await supabase
-      .from("decisions")
-      .select("agenda_id, decided")
-      .eq("meeting_id", meetingId);
-    if (error) return new Map();
-    const map = new Map();
-    (data || []).forEach(r => map.set(r.agenda_id, r.decided || ""));
-    return map;
-  }
+
   async function loadAttendanceForMeeting(meetingId) {
   const { data, error } = await supabase
     .from("attendance")
@@ -76,7 +67,7 @@
     .filter(Boolean);
 }
 
-  function render(meetingTitle, attendanceNames, agendaItems, decisionMap) {
+  function render(meetingTitle, attendanceNames, agendaItems) {
     const titleEl = document.getElementById("meetingTitle");
     const contentEl = document.getElementById("recordContent");
     const printBtn = document.getElementById("printBtn");
@@ -235,10 +226,9 @@ contentEl.appendChild(attLine);
 
   const title = await loadMeetingTitle(meetingId);
   const agenda = await loadAgendaItems(meetingId);
-  const decisions = await loadDecisionsForMeeting(meetingId);
   const attendanceNames = await loadAttendanceForMeeting(meetingId);
 
   if (title) document.title = `議事録 – ${title}`;
-  render(title, attendanceNames, agenda, decisions);
+  render(title, attendanceNames, agenda);
 })();
 })();
