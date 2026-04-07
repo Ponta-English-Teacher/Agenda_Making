@@ -1,20 +1,41 @@
 (() => {
   "use strict";
-    // ===== Supabase (opinions sharing) =====
-  // Uses <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> in member.html
+
+  // ===== Supabase =====
   const SUPABASE_URL = "https://hdxuvxvxocyzeggcrcyg.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_2DRqxosSHRram-e16oNuIg_c_4iBE94";
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
- function getMeetingId() {
-  const params = new URLSearchParams(window.location.search);
-  const meetingId = (params.get("meeting_id") || "").trim();
-  return meetingId; // must be a real Supabase meeting id
-}
+  function safeText(s) {
+    return (s ?? "").toString().trim();
+  }
+
+  function getMeetingId() {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get("meeting_id") || "").trim();
+  }
 
   function getAgendaId(it) {
-    // Working page has "agendaId" (stable). If missing, fallback to "id".
     return safeText(it.agendaId || it.id);
+  }
+
+  function clearNode(el) {
+    if (el) el.innerHTML = "";
+  }
+
+  function show(el) {
+    if (el) el.style.display = "block";
+  }
+
+  function hide(el) {
+    if (el) el.style.display = "none";
+  }
+
+  function escapeHtml(s) {
+    return safeText(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
   }
 
   const TYPE_LABEL = {
@@ -24,44 +45,41 @@
   };
   const TYPE_ORDER = ["report", "discuss", "contact"];
 
-  // DOM
+  // ===== DOM =====
   const elAgendaList = document.getElementById("agendaList");
   const elItemArea = document.getElementById("itemArea");
   const elItemHeading = document.getElementById("itemHeading");
   const elItemTitle = document.getElementById("itemTitle");
   const elMaterialsArea = document.getElementById("materialsArea");
   const elMeetingTitle = document.getElementById("meetingTitle");
+
   const elAttendanceName = document.getElementById("attendanceNameInput");
   const btnAttendance = document.getElementById("attendanceBtn");
   const elAttendanceStatus = document.getElementById("attendanceStatus");
   const elAttendanceChips = document.getElementById("attendanceChips");
-    // Opinion DOM
+
   const elNameInput = document.getElementById("nameInput");
   const elTextInput = document.getElementById("textInput");
   const elSharedList = document.getElementById("list");
-
   const elStatus = document.getElementById("status");
   const btnSend = document.getElementById("sendBtn");
-  
+
   const elDecisionInput = document.getElementById("decisionInput");
   const btnSaveDecision = document.getElementById("saveDecisionBtn");
   const elDecisionStatus = document.getElementById("decisionStatus");
-  
-  // Link to Record page（議事録）
-const recordLink = document.getElementById("recordLink");
 
-if (recordLink) {
-  recordLink.addEventListener("click", (e) => {
-    e.preventDefault();
+  const recordLink = document.getElementById("recordLink");
 
-    const meetingId = getMeetingId();
-    if (!meetingId) return;
+  if (recordLink) {
+    recordLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      const meetingId = getMeetingId();
+      if (!meetingId) return;
+      window.location.href = `./record.html?meeting_id=${encodeURIComponent(meetingId)}`;
+    });
+  }
 
-    window.location.href = `./record.html?meeting_id=${encodeURIComponent(meetingId)}`;
-  });
-}
-
-  // ===== Supabase helpers =====
+  // ===== Opinions =====
   async function fetchOpinions(meetingId, agendaId) {
     const { data, error } = await supabase
       .from("opinions")
@@ -88,55 +106,47 @@ if (recordLink) {
     }
     return true;
   }
-  // Utils
-  function safeText(s) {
-    return (s ?? "").toString().trim();
+
+  // ===== Decisions =====
+  // Current decision is stored directly in agenda_items.decision_text
+  async function saveDecision(meetingId, agendaId, decided) {
+    const { error } = await supabase
+      .from("agenda_items")
+      .update({ decision_text: decided })
+      .eq("id", agendaId);
+
+    if (error) {
+      console.error(error);
+      return false;
+    }
+    return true;
   }
 
-  function clearNode(el) {
-    if (el) el.innerHTML = "";
+  // ===== Attendance =====
+  async function loadAttendance(meetingId) {
+    const { data, error } = await supabase
+      .from("attendance")
+      .select("id, name, created_at")
+      .eq("meeting_id", meetingId)
+      .order("created_at", { ascending: true });
+
+    if (error) return [];
+    return data || [];
   }
 
-  function show(el) {
-    if (el) el.style.display = "block";
+  function renderAttendance(names) {
+    if (!elAttendanceChips) return;
+    elAttendanceChips.innerHTML = "";
+
+    names.forEach((n) => {
+      const span = document.createElement("span");
+      span.className = "att-chip";
+      span.textContent = n;
+      elAttendanceChips.appendChild(span);
+    });
   }
 
-  function hide(el) {
-    if (el) el.style.display = "none";
-  }
-  
-  // ===== Decision helpers =====
-async function loadDecision(meetingId, agendaId) {
-  const { data, error } = await supabase
-    .from("decisions")
-    .select("decided, created_at")
-    .eq("meeting_id", meetingId)
-    .eq("agenda_id", agendaId)
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (error || !data || data.length === 0) return null;
-
-  return data[0];
-}
-
-async function saveDecision(meetingId, agendaId, decided) {
-  const { error } = await supabase
-    .from("decisions")
-    .upsert(
-      [{ meeting_id: meetingId, agenda_id: agendaId, decided }],
-      { onConflict: "meeting_id,agenda_id" }
-    );
-
-  if (error) {
-    console.error(error);
-    return false;
-  }
-  return true;
-}
-  
-
-  // Render agenda list
+  // ===== Agenda List =====
   function renderAgendaList(items) {
     if (!elAgendaList) return;
     clearNode(elAgendaList);
@@ -148,15 +158,16 @@ async function saveDecision(meetingId, agendaId, decided) {
       return;
     }
 
-    // Group items by type
     const grouped = { report: [], discuss: [], contact: [] };
     for (const it of items) {
       const t = safeText(it.type);
-      if (t === "report" || t === "discuss" || t === "contact") grouped[t].push(it);
-      else grouped.discuss.push(it);
+      if (t === "report" || t === "discuss" || t === "contact") {
+        grouped[t].push(it);
+      } else {
+        grouped.discuss.push(it);
+      }
     }
 
-    // Render groups with headings + numbered items
     for (const typeKey of TYPE_ORDER) {
       const arr = grouped[typeKey];
       if (!arr.length) continue;
@@ -170,30 +181,19 @@ async function saveDecision(meetingId, agendaId, decided) {
 
       for (let i = 0; i < arr.length; i++) {
         const it = arr[i];
-
         const li = document.createElement("li");
         li.style.cursor = "pointer";
         li.style.margin = "4px 0";
 
         const jp = safeText(it.titleJP);
         const en = safeText(it.titleEN);
-
-        // Display number = within-group serial (member-friendly)
         const serial = `${i + 1}. `;
 
         li.textContent = en && en !== jp ? `${serial}${jp} / ${en}` : `${serial}${jp}`;
-
         li.addEventListener("click", () => renderSelectedItem(it, typeKey, i + 1));
         elAgendaList.appendChild(li);
       }
     }
-  }
-
-  function escapeHtml(s) {
-    return safeText(s)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;");
   }
 
   async function renderOpinionsForItem(it) {
@@ -224,13 +224,11 @@ async function saveDecision(meetingId, agendaId, decided) {
       .join("");
   }
 
-
-  // Render selected item detail
-  
+  // ===== Selected Item =====
   function renderSelectedItem(it, typeKey, serialNo) {
-  	window.__selectedAgendaItem = it;
-    if (!elItemArea) return;
+    window.__selectedAgendaItem = it;
 
+    if (!elItemArea) return;
     show(elItemArea);
 
     const jp = safeText(it.titleJP);
@@ -244,11 +242,9 @@ async function saveDecision(meetingId, agendaId, decided) {
       elItemTitle.textContent = en && en !== jp ? `${jp} / ${en}` : jp;
     }
 
-    // Materials (Member-visible only)
     if (elMaterialsArea) {
       clearNode(elMaterialsArea);
 
-      // materialsText (資料)
       const materialsText = safeText(it.materialsText);
       if (materialsText) {
         const p = document.createElement("p");
@@ -256,7 +252,6 @@ async function saveDecision(meetingId, agendaId, decided) {
         elMaterialsArea.appendChild(p);
       }
 
-      // links
       const urls = Array.isArray(it.urls) ? it.urls : [];
       if (urls.length) {
         const div = document.createElement("div");
@@ -275,7 +270,6 @@ async function saveDecision(meetingId, agendaId, decided) {
         elMaterialsArea.appendChild(div);
       }
 
-      // fileName (display only)
       const fileName = safeText(it.fileName);
       if (fileName) {
         const p = document.createElement("p");
@@ -283,215 +277,165 @@ async function saveDecision(meetingId, agendaId, decided) {
         elMaterialsArea.appendChild(p);
       }
 
-      // suggestion (案) — member-visible
       const suggestion = safeText(it.suggestion);
       if (suggestion) {
         const p = document.createElement("p");
         p.textContent = `案: ${suggestion}`;
         elMaterialsArea.appendChild(p);
       }
-      
-      // OneDrive attachment (name + URL)
-const attName = safeText(it.attachmentName);
-const attUrl = safeText(it.attachmentUrl);
 
-if (attName && attUrl) {
-  const p = document.createElement("p");
-  const a = document.createElement("a");
-  a.href = attUrl;
-  a.target = "_blank";
-  a.rel = "noopener noreferrer";
-  a.textContent = `📎 ${attName}`;
-  p.appendChild(a);
-  elMaterialsArea.appendChild(p);
-} else if (attUrl) {
-  const p = document.createElement("p");
-  const a = document.createElement("a");
-  a.href = attUrl;
-  a.target = "_blank";
-  a.rel = "noopener noreferrer";
-  a.textContent = "📎 添付ファイル（OneDrive）";
-  p.appendChild(a);
-  elMaterialsArea.appendChild(p);
-}
+      const attName = safeText(it.attachmentName);
+      const attUrl = safeText(it.attachmentUrl);
 
-      // IMPORTANT: do NOT show blueMemo on member page
+      if (attName && attUrl) {
+        const p = document.createElement("p");
+        const a = document.createElement("a");
+        a.href = attUrl;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = `📎 ${attName}`;
+        p.appendChild(a);
+        elMaterialsArea.appendChild(p);
+      } else if (attUrl) {
+        const p = document.createElement("p");
+        const a = document.createElement("a");
+        a.href = attUrl;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = "📎 添付ファイル（OneDrive）";
+        p.appendChild(a);
+        elMaterialsArea.appendChild(p);
+      }
     }
 
-    // Clear input when switching agenda
     if (elNameInput) elNameInput.value = "";
     if (elTextInput) elTextInput.value = "";
-
     if (elStatus) elStatus.textContent = "";
-    
-    
-    // Load Decision (決定事項)
-(async () => {
-  if (!elDecisionInput) return;
 
-  const d = it.decisionText || "";
-
-if (d && d.trim() !== "") {
-  elDecisionInput.value = d;
-} else {
-  elDecisionInput.value = `【決定】
+    // Show decision text from agenda_items.decision_text
+    if (elDecisionInput) {
+      const d = safeText(it.decisionText);
+      if (d) {
+        elDecisionInput.value = d;
+      } else {
+        elDecisionInput.value = `【決定】
 ・
 
 【補足（コメント）】
 `;
-}
-  if (d?.decided && d.decided.trim() !== "") {
-  elDecisionInput.value = d.decided;
-} else {
-  elDecisionInput.value = `【決定】
-・
+      }
+    }
 
-【補足（コメント）】
-`;
-}
+    if (elDecisionStatus) elDecisionStatus.textContent = "";
 
-  if (elDecisionStatus) elDecisionStatus.textContent = "";
-})();
-   
-    // Load shared opinions (Supabase)
     renderOpinionsForItem(it);
   }
-  
-  async function loadAttendance(meetingId) {
-  const { data, error } = await supabase
-    .from("attendance")
-    .select("id, name, created_at")
-    .eq("meeting_id", meetingId)
-    .order("created_at", { ascending: true });
 
-  if (error) return [];
-  return data || [];
-}
-
-function renderAttendance(names) {
-  if (!elAttendanceChips) return;
-  elAttendanceChips.innerHTML = "";
-
-  names.forEach((n) => {
-    const span = document.createElement("span");
-    span.className = "att-chip";
-    span.textContent = n;
-    elAttendanceChips.appendChild(span);
-  });
-}
-
+  // ===== Init =====
   function init() {
-    // Put meeting title in the page title (simple, no HTML edits required)
- (async () => {
-  const meetingId = getMeetingId();
+    (async () => {
+      const meetingId = getMeetingId();
 
-  if (!meetingId) {
-    document.title = "Member Page – (No meeting selected)";
-    renderAgendaList([]);
-    return;
-  }
-
-  // ===== Attendance (meeting-level) =====
-  let attendanceRows = [];
-  if (elAttendanceName && btnAttendance && elAttendanceChips) {
-    attendanceRows = await loadAttendance(meetingId);
-    renderAttendance(attendanceRows.map(r => safeText(r.name)));
-
-    btnAttendance.addEventListener("click", async () => {
-      const name = safeText(elAttendanceName.value);
-      if (!name) {
-        if (elAttendanceStatus) elAttendanceStatus.textContent = "名前を入力してください。";
+      if (!meetingId) {
+        document.title = "Member Page – (No meeting selected)";
+        renderAgendaList([]);
         return;
       }
 
-      // Simple duplicate prevention (exact match)
-      const existing = attendanceRows.map(r => safeText(r.name));
-      if (existing.includes(name)) {
-        if (elAttendanceStatus) elAttendanceStatus.textContent = "既に登録されています。";
+      // Attendance
+      let attendanceRows = [];
+      if (elAttendanceName && btnAttendance && elAttendanceChips) {
+        attendanceRows = await loadAttendance(meetingId);
+        renderAttendance(attendanceRows.map((r) => safeText(r.name)));
+
+        btnAttendance.addEventListener("click", async () => {
+          const name = safeText(elAttendanceName.value);
+          if (!name) {
+            if (elAttendanceStatus) elAttendanceStatus.textContent = "名前を入力してください。";
+            return;
+          }
+
+          const existing = attendanceRows.map((r) => safeText(r.name));
+          if (existing.includes(name)) {
+            if (elAttendanceStatus) elAttendanceStatus.textContent = "既に登録されています。";
+            return;
+          }
+
+          if (elAttendanceStatus) elAttendanceStatus.textContent = "Saving…";
+
+          const { error } = await supabase
+            .from("attendance")
+            .insert([{ meeting_id: meetingId, name }]);
+
+          if (error) {
+            console.error(error);
+            if (elAttendanceStatus) elAttendanceStatus.textContent = "保存に失敗しました。";
+            return;
+          }
+
+          attendanceRows = await loadAttendance(meetingId);
+          renderAttendance(attendanceRows.map((r) => safeText(r.name)));
+          if (elAttendanceStatus) elAttendanceStatus.textContent = "出席を記録しました。";
+        });
+      }
+
+      // Meeting title
+      const { data: meeting, error: mErr } = await supabase
+        .from("meetings")
+        .select("title")
+        .eq("id", meetingId)
+        .single();
+
+      if (!mErr && meeting?.title) {
+        document.title = `Member Page – ${meeting.title}`;
+        if (elMeetingTitle) elMeetingTitle.textContent = meeting.title;
+      }
+
+      // Agenda items
+      const { data: rows, error: aErr } = await supabase
+        .from("agenda_items")
+        .select(
+          "id, agenda_no, type, title_jp, title_en, materials_text, material_urls, attachment_name, attachment_url, suggestion, decision_text"
+        )
+        .eq("meeting_id", meetingId)
+        .order("agenda_no", { ascending: true });
+
+      if (aErr) {
+        console.error("AGENDA ERROR:", aErr);
+        alert("Agenda load error: " + JSON.stringify(aErr));
+        renderAgendaList([]);
         return;
       }
 
-      if (elAttendanceStatus) elAttendanceStatus.textContent = "Saving…";
+      const items = (rows || []).map((r) => ({
+        id: r.id,
+        agendaId: r.id,
+        type: r.type,
+        titleJP: safeText(r.title_jp),
+        titleEN: safeText(r.title_en),
+        materialsText: safeText(r.materials_text),
+        urls: safeText(r.material_urls)
+          ? safeText(r.material_urls).split(/\s+/).filter(Boolean)
+          : [],
+        attachmentName: safeText(r.attachment_name),
+        attachmentUrl: safeText(r.attachment_url),
+        suggestion: safeText(r.suggestion),
+        decisionText: safeText(r.decision_text),
+        fileName: "",
+        blueMemo: "",
+      }));
 
-      const { error } = await supabase
-        .from("attendance")
-        .insert([{ meeting_id: meetingId, name }]);
+      renderAgendaList(items);
+    })();
 
-      if (error) {
-        console.error(error);
-        if (elAttendanceStatus) elAttendanceStatus.textContent = "保存に失敗しました。";
-        return;
-      }
-
-      // Reload after insert (safe and simple)
-      attendanceRows = await loadAttendance(meetingId);
-      renderAttendance(attendanceRows.map(r => safeText(r.name)));
-      if (elAttendanceStatus) elAttendanceStatus.textContent = "出席を記録しました。";
-    });
-  }
-
-  // ===== Meeting title =====
-  const { data: meeting, error: mErr } = await supabase
-    .from("meetings")
-    .select("title")
-    .eq("id", meetingId)
-    .single();
-
-  if (!mErr && meeting?.title) {
-    document.title = `Member Page – ${meeting.title}`;
-    if (elMeetingTitle) elMeetingTitle.textContent = meeting.title;
-  }
-
-  // ===== Agenda items =====
-  const { data: rows, error: aErr } = await supabase
-    .from("agenda_items")
-    .select(
-      "id, agenda_no, type, title_jp, title_en, materials_text, material_urls, attachment_name, attachment_url, suggestion"
-    )
-    .eq("meeting_id", meetingId)
-    .order("agenda_no", { ascending: true });
-
-  if (aErr) {
-  console.error("AGENDA ERROR:", aErr);
-  alert("Agenda load error: " + JSON.stringify(aErr));
-  renderAgendaList([]);
-  return;
-}
-  const items = (rows || []).map((r) => ({
-    id: r.id,
-    agendaId: r.id, // IMPORTANT: agenda_items.id is the key
-    type: r.type,
-    titleJP: safeText(r.title_jp),
-    titleEN: safeText(r.title_en),
-    materialsText: safeText(r.materials_text),
-    urls: safeText(r.material_urls)
-      ? safeText(r.material_urls).split(/\s+/).filter(Boolean)
-      : [],
-    attachmentName: safeText(r.attachment_name),
-    attachmentUrl: safeText(r.attachment_url),
-    suggestion: safeText(r.suggestion),
-    fileName: "",
-    blueMemo: "",
-  }));
-
-  renderAgendaList(items);
-})();
-
-    // If items exist, auto-select first item (optional)
-    // (kept off for predictability)
-    
-        // Submit opinion (Supabase)
+    // Submit opinion
     if (btnSend) {
       btnSend.addEventListener("click", async () => {
-          
-          
-
-        // We need a selected item to post to
         const current = window.__selectedAgendaItem;
         if (!current) return;
 
-        const name = safeText(elNameInput?.value).trim() || "Anonymous";
-        const text = safeText(elTextInput?.value).trim();
+        const name = safeText(elNameInput?.value) || "Anonymous";
+        const text = safeText(elTextInput?.value);
 
         if (!text) {
           if (elStatus) elStatus.textContent = "Please write an opinion.";
@@ -512,27 +456,30 @@ function renderAttendance(names) {
         await renderOpinionsForItem(current);
       });
     }
-    // Save Decision (決定事項)
-if (btnSaveDecision) {
-  btnSaveDecision.addEventListener("click", async () => {
-  console.log("SAVE DECISION clicked");  
-  const current = window.__selectedAgendaItem;
-    if (!current) return;
 
-    const decided = safeText(elDecisionInput?.value);
+    // Save decision
+    if (btnSaveDecision) {
+      btnSaveDecision.addEventListener("click", async () => {
+        const current = window.__selectedAgendaItem;
+        if (!current) return;
 
-    if (elDecisionStatus) elDecisionStatus.textContent = "Saving…";
+        const decided = safeText(elDecisionInput?.value);
 
-    const ok = await saveDecision(getMeetingId(), getAgendaId(current), decided);
+        if (elDecisionStatus) elDecisionStatus.textContent = "Saving…";
 
-    if (!ok) {
-      if (elDecisionStatus) elDecisionStatus.textContent = "Failed (check console).";
-      return;
+        const ok = await saveDecision(getMeetingId(), getAgendaId(current), decided);
+
+        if (!ok) {
+          if (elDecisionStatus) elDecisionStatus.textContent = "Failed (check console).";
+          return;
+        }
+
+        current.decisionText = decided;
+
+        if (elDecisionStatus) elDecisionStatus.textContent = "Saved.";
+      });
     }
 
-    if (elDecisionStatus) elDecisionStatus.textContent = "Saved.";
-  });
-}
     hide(elItemArea);
   }
 
