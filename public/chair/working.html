@@ -61,8 +61,8 @@
         <label for="titleEN">Agenda Title (EN) (ChatGPT translation)</label>
         <input id="titleEN" type="text" placeholder="English title (translated)">
 
-        <label for="materialsText">Materials – Text (JP + EN expected)</label>
-        <textarea id="materialsText" placeholder="Paste official request / email text here (later: JP + EN)"></textarea>
+        <label for="materialsText">内容（背景・ポイント）</label>
+        <textarea id="materialsText" placeholder="【背景】&#10;何が起きているか／なぜこの議題が出ているか（1–2行）&#10;&#10;【ポイント】&#10;重要な事実・条件・前提（1–2行）"></textarea>
 
         <label for="attachmentName">添付ファイル名（OneDrive 表示名）</label>
         <input id="attachmentName" type="text" placeholder="例：英文学科.xlsx / 依頼状.pdf">
@@ -72,11 +72,11 @@
         <label for="materialUrls">Material URLs (multiple)</label>
         <input id="materialUrls" type="text" placeholder="https://... (You can paste multiple URLs separated by spaces or commas)">
 
-        <label for="suggestion">案（Suggestion）</label>
-        <textarea id="suggestion" placeholder="ここに案を書く（メンバーに表示される）"></textarea>
+        <label for="suggestion">案（提案・検討したい方向）</label>
+        <textarea id="suggestion" placeholder="この議題について、どう進めたいか（1–2行）"></textarea>
         
-        <label for="blueMemo">🔵 メモ（自分用・メンバー非表示）</label>
-        <textarea id="blueMemo" placeholder="ここは自分用メモ（後で埋める／確認する）"></textarea>
+        <label for="blueMemo">🔵 メモ（議論メモ・非公開）</label>
+        <textarea id="blueMemo" placeholder="・議論で出そうなポイント&#10;・気になる点&#10;・決定のたたき台"></textarea>
 
         <div class="actions">
           <button class="btn" id="btnClear">Clear</button>
