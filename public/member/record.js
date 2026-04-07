@@ -181,30 +181,20 @@ contentEl.appendChild(attLine);
 
         // 結果
         const decisionText = (it.decision_text || "").trim();
-        const resultSection = el("div", {});
-        resultSection.appendChild(
-          el("div", { className: "record-field-label" }, "結果")
-        );
+        const decisionText = (it.decision_text || "").trim();
 
-        const resultBody = el("div", {
-          className: decisionText
-            ? "record-decision"
-            : "record-decision record-fallback"
-        });
+if (decisionText) {
+  const resultSection = el("div", {});
+  resultSection.appendChild(
+    el("div", { className: "record-field-label" }, "結果")
+  );
 
-        if (decisionText) {
-          resultBody.textContent = decisionText;
-        } else {
-          const fallback =
-            it.type === "report" ? "報告のみ"
-            : it.type === "contact" ? "連絡のみ"
-            : "継続審議";
-          resultBody.textContent = fallback;
-        }
+  const resultBody = el("div", { className: "record-decision" });
+  resultBody.textContent = decisionText;
 
-        resultSection.appendChild(resultBody);
-        box.appendChild(resultSection);
-
+  resultSection.appendChild(resultBody);
+  box.appendChild(resultSection);
+}
         contentEl.appendChild(box);
       }
     }
