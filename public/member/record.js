@@ -45,7 +45,7 @@
     const { data, error } = await supabase
       .from("agenda_items")
       .select(
-        "id, agenda_no, type, title_jp, title_en"
+        "id, agenda_no, type, title_jp, title_en, materials_text, suggestion, decision_text"
       )
       .eq("meeting_id", meetingId)
       .order("agenda_no", { ascending: true });
@@ -158,11 +158,62 @@ contentEl.appendChild(attLine);
           );
         }
 
-        const decided = (decisionMap.get(it.id) || "").trim();
-        const d = el("div", { className: "record-decision" });
-        d.textContent = decided || "（未記入）";
+        // 内容 / 概要
+        const materialsText = (it.materials_text || "").trim();
+        const contentSection = el("div", {});
+        contentSection.appendChild(
+          el("div", { className: "record-field-label" }, "内容 / 概要")
+        );
+        const contentBody = el("div", {
+          className: materialsText
+            ? "record-field-body"
+            : "record-field-body record-fallback"
+        });
+        contentBody.textContent = materialsText || "記載なし";
+        contentSection.appendChild(contentBody);
+        box.appendChild(contentSection);
 
-        box.appendChild(d);
+        // 案
+        const suggestion = (it.suggestion || "").trim();
+        const suggestionSection = el("div", {});
+        suggestionSection.appendChild(
+          el("div", { className: "record-field-label" }, "案")
+        );
+        const suggestionBody = el("div", {
+          className: suggestion
+            ? "record-field-body"
+            : "record-field-body record-fallback"
+        });
+        suggestionBody.textContent = suggestion || "記載なし";
+        suggestionSection.appendChild(suggestionBody);
+        box.appendChild(suggestionSection);
+
+        // 結果
+        const decisionText = (it.decision_text || "").trim();
+        const resultSection = el("div", {});
+        resultSection.appendChild(
+          el("div", { className: "record-field-label" }, "結果")
+        );
+
+        const resultBody = el("div", {
+          className: decisionText
+            ? "record-decision"
+            : "record-decision record-fallback"
+        });
+
+        if (decisionText) {
+          resultBody.textContent = decisionText;
+        } else {
+          const fallback =
+            it.type === "report" ? "報告のみ"
+            : it.type === "contact" ? "連絡のみ"
+            : "継続審議";
+          resultBody.textContent = fallback;
+        }
+
+        resultSection.appendChild(resultBody);
+        box.appendChild(resultSection);
+
         contentEl.appendChild(box);
       }
     }
