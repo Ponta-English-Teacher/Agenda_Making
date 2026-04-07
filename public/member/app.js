@@ -225,11 +225,22 @@
   }
 
   // ===== Selected Item =====
-  function renderSelectedItem(it, typeKey, serialNo) {
+  async function renderSelectedItem(it, typeKey, serialNo) {
     window.__selectedAgendaItem = it;
 
     if (!elItemArea) return;
     show(elItemArea);
+
+    // 最新の decision_text を毎回 DB から取得
+    const { data: fresh, error: freshErr } = await supabase
+      .from("agenda_items")
+      .select("decision_text")
+      .eq("id", it.id)
+      .single();
+
+    if (!freshErr && fresh) {
+      it.decisionText = safeText(fresh.decision_text);
+    }
 
     const jp = safeText(it.titleJP);
     const en = safeText(it.titleEN);
@@ -312,7 +323,6 @@
     if (elTextInput) elTextInput.value = "";
     if (elStatus) elStatus.textContent = "";
 
-    // Show decision text from agenda_items.decision_text
     if (elDecisionInput) {
       const d = safeText(it.decisionText);
       if (d) {
