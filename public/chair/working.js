@@ -594,7 +594,7 @@
 
     const goMemberPage = document.getElementById("goMemberPage");
     if (goMemberPage && meetingIdFromUrl) {
-      goMemberPage.href = `member.html?meeting_id=${meetingIdFromUrl}`;
+      goMemberPage.href = `../member/member.html?meeting_id=${meetingIdFromUrl}`;
       goMemberPage.style.display = "inline";
     } else if (goMemberPage) {
       goMemberPage.style.display = "none";
@@ -682,7 +682,7 @@
         );
 
         if (goMemberPage) {
-          goMemberPage.href = `member.html?meeting_id=${meetingId}`;
+          goMemberPage.href = `../member/member.html?meeting_id=${meetingId}`;
           goMemberPage.style.display = "inline";
         }
 
