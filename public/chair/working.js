@@ -66,6 +66,23 @@
   return !id;
 }
 
+  function effectiveType(t) {
+    const v = safeText(t);
+    return (v === "report" || v === "discuss" || v === "contact") ? v : "discuss";
+  }
+
+  // Renumber agendaId 1, 2, 3... across all items in TYPE_ORDER sequence.
+  function renumberItems(items) {
+    let counter = 1;
+    for (const typeKey of TYPE_ORDER) {
+      for (const it of items) {
+        if (effectiveType(it.type) === typeKey) {
+          it.agendaId = String(counter++);
+        }
+      }
+    }
+  }
+
   function parseUrls(raw) {
     return safeText(raw)
       .split(/[\s,]+/g)
@@ -375,6 +392,29 @@
     setStatus("Saved.");
   }
 
+  function moveItem(id, direction) {
+    const items = loadDraft();
+    const idx = items.findIndex(it => it.id === id);
+    if (idx === -1) return;
+
+    const type = effectiveType(items[idx].type);
+    const sameTypeIndices = items
+      .map((it, i) => ({ it, i }))
+      .filter(({ it }) => effectiveType(it.type) === type)
+      .map(({ i }) => i);
+
+    const pos = sameTypeIndices.indexOf(idx);
+    const newPos = pos + direction;
+    if (newPos < 0 || newPos >= sameTypeIndices.length) return;
+
+    const swapIdx = sameTypeIndices[newPos];
+    [items[idx], items[swapIdx]] = [items[swapIdx], items[idx]];
+
+    renumberItems(items);
+    saveDraft(items);
+    render();
+  }
+
   async function deleteItem(id) {
     const items = loadDraft().filter(it => it.id !== id);
     saveDraft(items);
@@ -410,7 +450,8 @@
       h3.textContent = `${TYPE_LABEL[typeKey]} (${arr.length})`;
       groupEl.appendChild(h3);
 
-      for (const it of arr) {
+      for (let idxInGroup = 0; idxInGroup < arr.length; idxInGroup++) {
+        const it = arr[idxInGroup];
         const itemEl = document.createElement("div");
         itemEl.className = "item";
 
@@ -436,9 +477,23 @@
         left.appendChild(sub);
         head.appendChild(left);
 
-        // Edit / Delete buttons
+        // Reorder / Edit / Delete buttons
         const actionsEl = document.createElement("div");
         actionsEl.className = "item-actions";
+
+        const upBtn = document.createElement("button");
+        upBtn.className   = "icon-btn";
+        upBtn.type        = "button";
+        upBtn.textContent = "↑";
+        upBtn.disabled    = idxInGroup === 0;
+        upBtn.addEventListener("click", e => { e.stopPropagation(); moveItem(it.id, -1); });
+
+        const downBtn = document.createElement("button");
+        downBtn.className   = "icon-btn";
+        downBtn.type        = "button";
+        downBtn.textContent = "↓";
+        downBtn.disabled    = idxInGroup === arr.length - 1;
+        downBtn.addEventListener("click", e => { e.stopPropagation(); moveItem(it.id, 1); });
 
         const editBtn = document.createElement("button");
         editBtn.className   = "icon-btn";
@@ -452,6 +507,8 @@
         delBtn.textContent = "Delete";
         delBtn.addEventListener("click", e => { e.stopPropagation(); deleteItem(it.id); });
 
+        actionsEl.appendChild(upBtn);
+        actionsEl.appendChild(downBtn);
         actionsEl.appendChild(editBtn);
         actionsEl.appendChild(delBtn);
         head.appendChild(actionsEl);

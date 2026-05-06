@@ -244,6 +244,10 @@ textarea{ min-height:96px; resize:vertical; }
   font-size:12px;
   font-weight:800;
 }
+.icon-btn:disabled{
+  opacity:0.3;
+  cursor:default;
+}
 
 .materials{
   margin-top:8px;
