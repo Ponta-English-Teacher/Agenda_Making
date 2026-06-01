@@ -444,6 +444,9 @@
   }
 
   async function deleteItem(id) {
+    const target = loadDraft().find(it => it.id === id);
+    const title  = safeText(target?.titleJP) || "(no title)";
+    if (!confirm(`Delete this agenda item?\n\n【${title}】\n\nThis action cannot be undone.`)) return;
     const items = loadDraft().filter(it => it.id !== id);
     saveDraft(items);
     if (editingId === id) exitEditMode({ clearForm: true });
