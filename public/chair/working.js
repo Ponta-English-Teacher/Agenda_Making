@@ -83,11 +83,39 @@
     }
   }
 
-  function parseUrls(raw) {
-    return safeText(raw)
-      .split(/[\s,]+/g)
-      .map(x => x.trim())
-      .filter(u => /^https?:\/\//i.test(u));
+  // Parse storage string → [{label, url}]. Handles both old (space-sep) and new (newline + ::) formats.
+  function parseUrlEntries(raw) {
+    const str = safeText(raw);
+    if (!str) return [];
+    if (str.includes("\n") || str.includes("::")) {
+      return str.split("\n").map(l => l.trim()).filter(Boolean).map(line => {
+        const sep = line.indexOf("::");
+        if (sep > 0) return { label: line.slice(0, sep).trim(), url: line.slice(sep + 2).trim() };
+        return { label: "", url: line };
+      }).filter(e => /^https?:\/\//i.test(e.url));
+    }
+    return str.split(/[\s,]+/g).map(u => u.trim()).filter(u => /^https?:\/\//i.test(u))
+      .map(url => ({ label: "", url }));
+  }
+
+  // Serialize [{label, url}] → storage string (newline-separated, :: for labels).
+  function serializeUrlEntries(entries) {
+    return entries.map(e => e.label ? `${e.label}::${e.url}` : e.url).join("\n");
+  }
+
+  // Parse textarea input (human-readable "Label: URL" per line) → [{label, url}].
+  function parseTextareaUrls(raw) {
+    return safeText(raw).split("\n").map(l => l.trim()).filter(Boolean).map(line => {
+      const m = line.match(/^(.+?):\s*(https?:\/\/.+)$/i);
+      if (m) return { label: m[1].trim(), url: m[2].trim() };
+      if (/^https?:\/\//i.test(line)) return { label: "", url: line };
+      return null;
+    }).filter(Boolean);
+  }
+
+  // Convert [{label, url}] → textarea display text ("Label: URL" per line).
+  function entriesToTextarea(entries) {
+    return entries.map(e => e.label ? `${e.label}: ${e.url}` : e.url).join("\n");
   }
 
   function setStatus(msg) {
@@ -156,7 +184,7 @@
       materials_text:  safeText(it.materialsText),
       attachment_name: safeText(it.attachmentName),
       attachment_url:  safeText(it.attachmentUrl),
-      material_urls:   Array.isArray(it.urls) ? it.urls.join(" ") : "",
+      material_urls:   Array.isArray(it.urlEntries) ? serializeUrlEntries(it.urlEntries) : "",
       suggestion:      safeText(it.suggestion),
       blue_memo:       safeText(it.blueMemo),
       // decision_text intentionally never written here
@@ -272,7 +300,7 @@
       materialsText:  it.materials_text || "",
       attachmentName: it.attachment_name || "",
       attachmentUrl:  it.attachment_url || "",
-      urls:           (it.material_urls || "").split(" ").filter(Boolean),
+      urlEntries:     parseUrlEntries(it.material_urls || ""),
       suggestion:     it.suggestion || "",
       blueMemo:       it.blue_memo || "",
       createdAt:      nowISO(),
@@ -306,7 +334,7 @@
       titleJP,
       titleEN,
       materialsText:  safeText(elMaterialsText?.value),
-      urls:           parseUrls(elMaterialUrls?.value),
+      urlEntries:     parseTextareaUrls(elMaterialUrls?.value),
       attachmentName: safeText(elAttachmentName?.value),
       attachmentUrl:  safeText(elAttachmentUrl?.value),
       suggestion:     safeText(elSuggestion?.value),
@@ -322,7 +350,7 @@
     if (elTitleJP)        elTitleJP.value         = safeText(item.titleJP);
     if (elTitleEN)        elTitleEN.value         = safeText(item.titleEN);
     if (elMaterialsText)  elMaterialsText.value   = safeText(item.materialsText);
-    if (elMaterialUrls)   elMaterialUrls.value    = Array.isArray(item.urls) ? item.urls.join(" ") : "";
+    if (elMaterialUrls)   elMaterialUrls.value    = entriesToTextarea(Array.isArray(item.urlEntries) ? item.urlEntries : []);
     if (elAttachmentName) elAttachmentName.value  = safeText(item.attachmentName);
     if (elAttachmentUrl)  elAttachmentUrl.value   = safeText(item.attachmentUrl);
     if (elSuggestion)     elSuggestion.value      = safeText(item.suggestion);
@@ -515,17 +543,19 @@
         itemEl.appendChild(head);
 
         // URL links
-        const urls = Array.isArray(it.urls) ? it.urls : [];
-        if (urls.length) {
+        const urlEntries = Array.isArray(it.urlEntries) ? it.urlEntries : [];
+        if (urlEntries.length) {
           const mwrap = document.createElement("div");
           mwrap.className = "materials";
-          urls.forEach((url, i) => {
+          urlEntries.forEach((entry, i) => {
             const a = document.createElement("a");
             a.className = "mat";
-            a.href = url;
+            a.href = entry.url;
             a.target = "_blank";
             a.rel = "noopener noreferrer";
-            a.textContent = `🔗 Link${urls.length > 1 ? " " + (i + 1) : ""}`;
+            a.textContent = entry.label
+              ? `🔗 ${entry.label}`
+              : `🔗 Link${urlEntries.length > 1 ? " " + (i + 1) : ""}`;
             mwrap.appendChild(a);
           });
           itemEl.appendChild(mwrap);

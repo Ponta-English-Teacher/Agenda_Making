@@ -10,6 +10,20 @@
     return (s ?? "").toString().trim();
   }
 
+  function parseUrlEntries(raw) {
+    const str = safeText(raw);
+    if (!str) return [];
+    if (str.includes("\n") || str.includes("::")) {
+      return str.split("\n").map(l => l.trim()).filter(Boolean).map(line => {
+        const sep = line.indexOf("::");
+        if (sep > 0) return { label: line.slice(0, sep).trim(), url: line.slice(sep + 2).trim() };
+        return { label: "", url: line };
+      }).filter(e => /^https?:\/\//i.test(e.url));
+    }
+    return str.split(/[\s,]+/g).map(u => u.trim()).filter(u => /^https?:\/\//i.test(u))
+      .map(url => ({ label: "", url }));
+  }
+
   function getMeetingId() {
     const params = new URLSearchParams(window.location.search);
     return (params.get("meeting_id") || "").trim();
@@ -269,11 +283,14 @@
         div.style.margin = "8px 0";
 
         for (let i = 0; i < urls.length; i++) {
+          const entry = urls[i];
           const a = document.createElement("a");
-          a.href = urls[i];
+          a.href = entry.url;
           a.target = "_blank";
           a.rel = "noopener noreferrer";
-          a.textContent = urls.length > 1 ? `Link ${i + 1}` : "Link";
+          a.textContent = entry.label
+            ? entry.label
+            : (urls.length > 1 ? `Link ${i + 1}` : "Link");
           a.style.display = "inline-block";
           a.style.marginRight = "10px";
           div.appendChild(a);
@@ -424,9 +441,7 @@
         titleJP: safeText(r.title_jp),
         titleEN: safeText(r.title_en),
         materialsText: safeText(r.materials_text),
-        urls: safeText(r.material_urls)
-          ? safeText(r.material_urls).split(/\s+/).filter(Boolean)
-          : [],
+        urls: parseUrlEntries(safeText(r.material_urls)),
         attachmentName: safeText(r.attachment_name),
         attachmentUrl: safeText(r.attachment_url),
         suggestion: safeText(r.suggestion),
