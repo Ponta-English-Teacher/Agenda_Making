@@ -247,7 +247,16 @@
     status.className = "opinion-checkbox-status";
     status.setAttribute("role", "status");
     status.style.cssText = "font-size:12px;color:#a00000;";
-    card.append(author, body, time, status);
+    const actions = document.createElement("div");
+    actions.style.cssText = "margin-top:8px; display:flex; justify-content:flex-end;";
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "opinion-delete";
+    deleteBtn.textContent = "削除 / Delete";
+    deleteBtn.setAttribute("aria-label", "このコメントを削除 / Delete this comment");
+    deleteBtn.style.cssText = "font-size:12px; padding:4px 9px; cursor:pointer;";
+    actions.appendChild(deleteBtn);
+    card.append(author, body, time, actions, status);
     return card;
   }
 
@@ -266,6 +275,47 @@
     }
     for (const op of opinions) elSharedList.appendChild(renderOneOpinion(op));
   }
+
+  // Deletion is restricted to the selected opinion and requires one explicit warning.
+  // Table DELETE permissions remain unchanged; a narrowly scoped RPC handles removal.
+  if (elSharedList) elSharedList.addEventListener("click", async event => {
+    const button = event.target.closest("button.opinion-delete");
+    if (!button || !elSharedList.contains(button)) return;
+    const card = button.closest("[data-opinion-id]");
+    const selected = window.__selectedAgendaItem;
+    if (!card || !selected || card.dataset.saving === "true") return;
+    const opinionId = Number(card.dataset.opinionId);
+    if (!Number.isSafeInteger(opinionId)) return;
+
+    const confirmed = window.confirm(
+      "このコメントを削除しますか？削除すると元に戻せません。\\n" +
+      "Delete this comment? This action cannot be undone."
+    );
+    if (!confirmed) return;
+
+    card.dataset.saving = "true";
+    card.querySelectorAll("button").forEach(b => { b.disabled = true; });
+    const status = card.querySelector(".opinion-checkbox-status");
+    if (status) status.textContent = "Deleting… / 削除中…";
+    const { data, error } = await supabase.rpc("delete_opinion", {
+      p_opinion_id: opinionId,
+      p_meeting_id: getMeetingId(),
+      p_agenda_id: getAgendaId(selected),
+    });
+    if (error || data !== true) {
+      console.error("Opinion deletion failed:", error || data);
+      card.dataset.saving = "false";
+      card.querySelectorAll("button").forEach(b => { b.disabled = false; });
+      if (status) status.textContent = "削除できませんでした / Could not delete.";
+      return;
+    }
+    if (window.__selectedAgendaItem === selected) {
+      card.remove();
+      if (!elSharedList.querySelector("[data-opinion-id]")) {
+        elSharedList.textContent = "No opinions yet.";
+      }
+    }
+  });
 
   // A single handler supports all posted comments, including newly loaded ones.
   if (elSharedList) elSharedList.addEventListener("click", async event => {
