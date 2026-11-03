@@ -56,9 +56,9 @@ begin
   if v_position = 0 then raise exception 'Checkbox not found'; end if;
 
   if (v_char = '☑') is distinct from p_checked then
-    v_text := pg_catalog.overlay(v_text placing
-      (case when p_checked then '☑' else '☐' end)
-      from v_position for 1);
+    v_text := pg_catalog.substr(v_text, 1, v_position - 1)
+      || (case when p_checked then '☑' else '☐' end)
+      || pg_catalog.substr(v_text, v_position + 1);
     update public.opinions set text = v_text where id = p_opinion_id;
   end if;
 
