@@ -74,6 +74,7 @@
 
   const elNameInput = document.getElementById("nameInput");
   const elTextInput = document.getElementById("textInput");
+  const btnInsertCheckbox = document.getElementById("insertCheckboxBtn");
   const elSharedList = document.getElementById("list");
   const elStatus = document.getElementById("status");
   const btnSend = document.getElementById("sendBtn");
@@ -97,7 +98,7 @@
   async function fetchOpinions(meetingId, agendaId) {
     const { data, error } = await supabase
       .from("opinions")
-      .select("name,text,created_at")
+      .select("id,name,text,created_at")
       .eq("meeting_id", meetingId)
       .eq("agenda_id", agendaId)
       .order("created_at", { ascending: true });
@@ -210,33 +211,99 @@
     }
   }
 
+  // Only U+2610 and U+2611 are interactive; ordinary squares remain text.
+  function renderCheckboxText(raw) {
+    const parts = String(raw ?? "").split(/([☐☑])/);
+    let checkboxIndex = 0;
+    return parts.map(part => {
+      if (part !== "☐" && part !== "☑") return escapeHtmlFragment(part);
+      const checked = part === "☑";
+      const index = checkboxIndex++;
+      return `<button type="button" class="opinion-checkbox" data-index="${index}" data-checked="${checked}" aria-label="${checked ? "Checked / 確認済み" : "Unchecked / 未確認"}" aria-pressed="${checked}" title="Click to change / クリックして変更" style="cursor:pointer;border:0;background:transparent;padding:0 3px;font:inherit;color:inherit;">${part}</button>`;
+    }).join("");
+  }
+
+  function escapeHtmlFragment(s) {
+    return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;").replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function renderOneOpinion(op) {
+    const card = document.createElement("div");
+    card.style.cssText = "border:1px solid #ddd; padding:10px; margin:10px 0; border-radius:10px;";
+    card.dataset.opinionId = String(op.id);
+    const author = document.createElement("div");
+    author.style.fontWeight = "800";
+    author.textContent = op.name || "";
+    const body = document.createElement("div");
+    body.className = "opinion-body";
+    body.style.cssText = "white-space:pre-wrap; margin-top:6px;";
+    body.innerHTML = renderCheckboxText(op.text);
+    const time = document.createElement("div");
+    time.style.cssText = "color:#888; font-size:12px; margin-top:6px;";
+    time.textContent = op.created_at || "";
+    const status = document.createElement("div");
+    status.className = "opinion-checkbox-status";
+    status.setAttribute("role", "status");
+    status.style.cssText = "font-size:12px;color:#a00000;";
+    card.append(author, body, time, status);
+    return card;
+  }
+
   async function renderOpinionsForItem(it) {
     if (!elSharedList) return;
-
     const meetingId = getMeetingId();
     const agendaId = getAgendaId(it);
-
-    elSharedList.innerHTML = `<p style="color:#666;">Loading…</p>`;
-
+    elSharedList.textContent = "Loading…";
     const opinions = await fetchOpinions(meetingId, agendaId);
-
+    // Avoid displaying a slow response from a previously selected agenda.
+    if (window.__selectedAgendaItem !== it) return;
+    elSharedList.innerHTML = "";
     if (!opinions.length) {
-      elSharedList.innerHTML = `<p style="color:#666;">No opinions yet.</p>`;
+      elSharedList.textContent = "No opinions yet.";
       return;
     }
-
-    elSharedList.innerHTML = opinions
-      .map(
-        (op) => `
-        <div style="border:1px solid #ddd; padding:10px; margin:10px 0; border-radius:10px;">
-          <div style="font-weight:800;">${escapeHtml(op.name)}</div>
-          <div style="white-space:pre-wrap; margin-top:6px;">${escapeHtml(op.text)}</div>
-          <div style="color:#888; font-size:12px; margin-top:6px;">${escapeHtml(op.created_at)}</div>
-        </div>
-      `
-      )
-      .join("");
+    for (const op of opinions) elSharedList.appendChild(renderOneOpinion(op));
   }
+
+  // A single handler supports all posted comments, including newly loaded ones.
+  if (elSharedList) elSharedList.addEventListener("click", async event => {
+    const button = event.target.closest("button.opinion-checkbox");
+    if (!button || !elSharedList.contains(button)) return;
+    const card = button.closest("[data-opinion-id]");
+    const current = window.__selectedAgendaItem;
+    if (!card || !current || card.dataset.saving === "true") return;
+
+    const opinionId = Number(card.dataset.opinionId);
+    const index = Number(button.dataset.index);
+    if (!Number.isSafeInteger(opinionId) || !Number.isInteger(index)) return;
+    const wanted = button.dataset.checked !== "true";
+    const status = card.querySelector(".opinion-checkbox-status");
+    card.dataset.saving = "true";
+    card.querySelectorAll("button.opinion-checkbox").forEach(b => { b.disabled = true; });
+    if (status) status.textContent = "Saving…";
+
+    const { data, error } = await supabase.rpc("set_opinion_checkbox", {
+      p_opinion_id: opinionId,
+      p_meeting_id: getMeetingId(),
+      p_index: index,
+      p_checked: wanted,
+    });
+    if (error || typeof data !== "string") {
+      console.error("Checkbox save failed:", error);
+      if (status) status.textContent = "保存できませんでした / Could not save.";
+      card.dataset.saving = "false";
+      // Restore the authoritative state rather than leaving an uncertain checkbox.
+      if (window.__selectedAgendaItem === current) await renderOpinionsForItem(current);
+      return;
+    }
+    if (window.__selectedAgendaItem === current && card.isConnected) {
+      card.querySelector(".opinion-body").innerHTML = renderCheckboxText(data);
+      if (status) status.textContent = "";
+    }
+    card.dataset.saving = "false";
+  });
 
   // ===== Selected Item =====
   async function renderSelectedItem(it, typeKey, serialNo) {
@@ -452,6 +519,16 @@
 
       renderAgendaList(items);
     })();
+
+    // Insert the correct checkbox character into free-text comments.
+    if (btnInsertCheckbox && elTextInput) {
+      btnInsertCheckbox.addEventListener("click", () => {
+        const start = elTextInput.selectionStart;
+        const end = elTextInput.selectionEnd;
+        elTextInput.setRangeText("☐", start, end, "end");
+        elTextInput.focus();
+      });
+    }
 
     // Submit opinion
     if (btnSend) {
